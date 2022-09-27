@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/PeernetOfficial/core"
@@ -15,25 +16,28 @@ import (
 )
 
 // StartPeernet start peernet
-func StartPeernet() {
+func InitPeernet() *core.Backend {
 	backend, status, err := core.Init("Your application/1.0", "Config.yaml", nil, nil)
 	if status != core.ExitSuccess {
 		fmt.Printf("Error %d initializing backend: %s\n", status, err.Error())
-		return
+		return nil
 	}
 
+	return backend
+}
+
+func RunPeernet(backend *core.Backend) {
 	webapi.Start(backend, []string{"0.0.0.0:8081"}, false, "", "", 10*time.Second, 10*time.Second, uuid.Nil)
 	backend.Connect()
 
 	for {
 
 	}
-
 }
 
 type WarehouseResult struct {
 	Status int    `json:"status"`
-	Hash   string `json:"hash"`
+	Hash   []byte `json:"hash"`
 }
 
 type BlockchainRequest struct {
@@ -41,7 +45,7 @@ type BlockchainRequest struct {
 }
 
 type File struct {
-	Hash string `json:"hash"`
+	Hash []byte `json:"hash"`
 	Type int    `json:"type"`
 	Name string `json:"name"`
 }
@@ -79,7 +83,7 @@ type BlockchainResponse struct {
 	Version int `json:"version"`
 }
 
-func AddFileToBlockchain(hash string, filename string) *BlockchainResponse {
+func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
 	url := "http://0.0.0.0:8081/blockchain/file/add"
 
 	// Create file object for post
@@ -122,16 +126,17 @@ func AddFileToBlockchain(hash string, filename string) *BlockchainResponse {
 // Add files
 func main() {
 	// Start peernet
-	go StartPeernet()
+	backend := InitPeernet()
+	go RunPeernet(backend)
+
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*.html")
+	r.Static("/templates", "./templates")
 	r.GET("/upload", func(c *gin.Context) {
-		fmt.Println("here")
-		c.HTML(http.StatusOK, "upload.html", nil)
+		c.HTML(http.StatusOK, "upload2.html", nil)
 	})
 
 	r.POST("/uploadFile", func(c *gin.Context) {
-		fmt.Println("here")
 		file, header, err := c.Request.FormFile("file")
 		defer file.Close()
 
@@ -156,9 +161,14 @@ func main() {
 			return
 		}
 
-		fmt.Println("here")
-		c.HTML(http.StatusOK, "upload.html", gin.H{
-			"hash": warehouseResult.Hash,
+		_, publicKey := backend.ExportPrivateKey()
+		fmt.Println(hex.EncodeToString(publicKey.SerializeCompressed()))
+
+		c.HTML(http.StatusOK, "upload2.html", gin.H{
+			"hash":     hex.EncodeToString(warehouseResult.Hash),
+			"filename": header.Filename,
+			"size":     header.Size,
+			"link":     "https://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash),
 		})
 
 	})
