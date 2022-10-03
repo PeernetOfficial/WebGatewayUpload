@@ -15,6 +15,8 @@
         <div>
             <label for="formFileLg" class="form-label">Upload your file</label>
             <input class="form-control form-control-lg" id="formFileLg" type="file" name="file">
+            <h3> or </h3>
+            <pre><code>curl http://localhost:8080/uploadCurl -F add=@&lt;file name&gt;</code></pre>
         </div>
         <input type="submit" value="Submit">
         {{ if .hash }}
