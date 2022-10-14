@@ -6,6 +6,7 @@ require (
 	github.com/PeernetOfficial/core v0.0.0-20220601150942-0e3e8dc9885c
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.3.0
+	github.com/julianshen/gin-limiter v0.0.0-20161123033831-fc39b5e90fe7
 )
 
 require (
@@ -20,6 +21,7 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect

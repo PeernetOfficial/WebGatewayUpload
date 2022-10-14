@@ -12,6 +12,7 @@ import (
 	"github.com/PeernetOfficial/core/webapi"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	limiter "github.com/julianshen/gin-limiter"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -228,11 +229,17 @@ func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/templates", "./templates")
-	r.GET("/upload", func(c *gin.Context) {
+
+	// Middleware rate limiter
+	lm := limiter.NewRateLimiter(time.Minute, 2, func(ctx *gin.Context) (string, error) {
+		return "", nil
+	})
+
+	r.GET("/upload", lm.Middleware(), func(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", nil)
 	})
 
-	r.POST("/uploadFile", func(c *gin.Context) {
+	r.POST("/uploadFile", lm.Middleware(), func(c *gin.Context) {
 		file, header, err := c.Request.FormFile("file")
 		defer file.Close()
 
@@ -258,7 +265,7 @@ func main() {
 	// Implement CURL script to ensure linux users can upload directly
 	// the Cli like https://bashupload.com
 	// Ex: curl http://localhost:8080/uploadCurl -F add=@<file name>
-	r.POST("/uploadCurl", func(c *gin.Context) {
+	r.POST("/uploadCurl", lm.Middleware(), func(c *gin.Context) {
 		file, header, err := c.Request.FormFile("add")
 		defer file.Close()
 
