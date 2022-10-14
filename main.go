@@ -230,15 +230,19 @@ func main() {
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/templates", "./templates")
 
-	// Middleware rate limiter
+	// --------------------------------- Middleware rate limiter -----------------------------------
 	lm := limiter.NewRateLimiter(time.Minute, 2, func(ctx *gin.Context) (string, error) {
 		return "", nil
 	})
+	// ---------------------------------------------------------------------------------------------
 
+	// ---------------------------------------- Routes ---------------------------------------------
+	// GET /upload to open upload page from webgateway
 	r.GET("/upload", lm.Middleware(), func(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", nil)
 	})
 
+	// POST /uploadFile Uploads file to peernet from Webgateway
 	r.POST("/uploadFile", lm.Middleware(), func(c *gin.Context) {
 		file, header, err := c.Request.FormFile("file")
 		defer file.Close()
@@ -257,7 +261,7 @@ func main() {
 			"filename": header.Filename,
 			"size":     header.Size,
 			"link":     "https://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash),
-			"address":  BackendAddressWithHTTP,
+			"address":  *WebpageAddress,
 		})
 
 	})
@@ -282,12 +286,18 @@ func main() {
 		c.Data(http.StatusOK, "plain/text", []byte(link))
 	})
 
+	// ---------------------------------------------------------------------------------------------
+
+	// ---------------------------------- Start Gin server -----------------------------------------
 	// check if SSL is used or not
 	if *SSL {
 		BackendAddressWithHTTP = "https://" + *BackEndApiAddress
 		r.RunTLS(*WebpageAddress, *Certificate, *Key)
+		*WebpageAddress = "https://" + *WebpageAddress
 	} else {
 		BackendAddressWithHTTP = "http://" + *BackEndApiAddress
 		r.Run(*WebpageAddress)
+		*WebpageAddress = "http://" + *WebpageAddress
 	}
+	// ---------------------------------------------------------------------------------------------
 }

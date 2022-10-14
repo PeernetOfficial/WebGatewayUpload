@@ -34,7 +34,7 @@ Usage of ./WebGatewayUpload:
 
 ## Routes 
 - (GET) `/upload` (Opens upload page in the webgateway)
-- (POST) `/upload` (Uploads file to peernet from Webpage)
+- (POST) `/uploadFile` (Uploads file to peernet from Webpage)
 - (POST) `/uploadCurl` (Uploads file from CURL)
 
    Ex:
