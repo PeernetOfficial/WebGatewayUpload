@@ -16,9 +16,23 @@ import (
     "mime/multipart"
     "net/http"
     "time"
+    "flag"
 )
 
-// StartPeernet start peernet
+// Variables for the flags to get the address
+var (
+    BackEndApiAddress *string
+    WebpageAddress    *string
+    SSL               *bool
+)
+
+func init() {
+    BackEndApiAddress = flag.String("BackEndApiAddress", "0.0.0.0:8088", "current environment")
+    WebpageAddress = flag.String("WebpageAddress", "0.0.0.0:8098", "current environment")
+    SSL = flag.Bool("SSL", false, "Flag to check if the SSL certificate is enabled or not")
+}
+
+// Initializes Peernet 
 func InitPeernet() *core.Backend {
     backend, status, err := core.Init("Your application/1.0", "Config.yaml", nil, nil)
     if status != core.ExitSuccess {
@@ -29,8 +43,9 @@ func InitPeernet() *core.Backend {
     return backend
 }
 
+// Starts the WebAPI and peernet 
 func RunPeernet(backend *core.Backend) {
-    webapi.Start(backend, []string{"0.0.0.0:8081"}, false, "", "", 10*time.Second, 10*time.Second, uuid.Nil)
+    webapi.Start(backend, []string{*BackEndApiAddress}, false, "", "", 10*time.Second, 10*time.Second, uuid.Nil)
     backend.Connect()
 
     for {
@@ -54,7 +69,7 @@ type File struct {
 }
 
 func AddFileWarehouse(file io.Reader) *WarehouseResult {
-    url := "http://0.0.0.0:8081/warehouse/create"
+    url := *BackEndApiAddress + "/warehouse/create"
 
     req, err := http.NewRequest("POST", url, file)
     //req.Header.Set("X-Custom-Header", "myvalue")
@@ -67,10 +82,10 @@ func AddFileWarehouse(file io.Reader) *WarehouseResult {
     }
     defer resp.Body.Close()
 
-    fmt.Println("response Status:", resp.Status)
-    fmt.Println("response Headers:", resp.Header)
+    //fmt.Println("response Status:", resp.Status)
+    //fmt.Println("response Headers:", resp.Header)
     body, _ := ioutil.ReadAll(resp.Body)
-    fmt.Println("response Body:", string(body))
+    //fmt.Println("response Body:", string(body))
     var result WarehouseResult
     err = json.Unmarshal(body, &result)
     if err != nil {
@@ -86,8 +101,9 @@ type BlockchainResponse struct {
     Version int `json:"version"`
 }
 
+// The follwoing function adds the filename and hash to the blockchain  
 func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
-    url := "http://0.0.0.0:8081/blockchain/file/add"
+    url := *BackEndApiAddress + "/blockchain/file/add"
 
     // Create file object for post
     var blockchainRequest BlockchainRequest
@@ -111,10 +127,10 @@ func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
     }
     defer resp.Body.Close()
 
-    fmt.Println("response Status:", resp.Status)
-    fmt.Println("response Headers:", resp.Header)
+    //fmt.Println("response Status:", resp.Status)
+    //fmt.Println("response Headers:", resp.Header)
     body, _ := ioutil.ReadAll(resp.Body)
-    fmt.Println("response Body:", string(body))
+    //fmt.Println("response Body:", string(body))
     var result BlockchainResponse
     err = json.Unmarshal(body, &result)
     if err != nil {
@@ -122,8 +138,6 @@ func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
     }
 
     return &result
-
-    //return &result
 }
 
 // UploadFile Simple abstracted function to add files to peernet core
@@ -153,6 +167,14 @@ func UploadFile(backend *core.Backend, file *multipart.File, header *multipart.F
 
 // Add files
 func main() {
+
+    // check if SSL is used or not
+    if *SSL {
+        *BackEndApiAddress = "https://" + *BackEndApiAddress
+    } else {
+        *BackEndApiAddress = "http://" + *BackEndApiAddress
+    }
+
     // Start peernet
     backend := InitPeernet()
     go RunPeernet(backend)
@@ -213,5 +235,5 @@ func main() {
         //})
     })
 
-    r.Run()
+    r.Run(*WebpageAddress)
 }

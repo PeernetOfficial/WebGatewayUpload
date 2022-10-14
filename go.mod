@@ -1,6 +1,6 @@
 module github.com/PeernetOfficial/WebGatewayUpload
 
-go 1.19
+go 1.18
 
 require (
 	github.com/PeernetOfficial/core v0.0.0-20220601150942-0e3e8dc9885c
