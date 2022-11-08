@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-	<title>Peernet Download file</title>
+	<title>Peernet Upload file</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -25,18 +25,18 @@
 								<h2 class="Peernetblue">Upload file to peernet</h2>
 								<br>
                                 <br>
-								<form class="form-group" method="POST" action="/uploadFile" enctype="multipart/form-data">
+								<form class="form-group" method="POST" action="/upload" enctype="multipart/form-data">
 									<div class="form-group mb-3">
 										<!-- <label for="formFileLg" class="form-label">Upload your file</label> -->
-										<input class="btn btn-white btn-outline-white" id="formFileLg" type="file" name="file">
+										<input class="btn btn-white btn-outline-white" id="formFileLg" type="file" name="file" required>
 									</div>
 									<input class="btn btn-white btn-outline-white" type="submit" value="Submit">
-									<!-- {{ if .hash }}
-									<h3> hash: {{ .hash }} </h3>
-									{{end}} -->
+									{{ if .error }}
+									<h3 style="color:red"> Error: {{ .error }} </h3>
+									{{end}}
 								</form>
-                                <h3 style="color:white"> or </h3>
-                                <h4 style="color:white">curl {{ .address }}/uploadCurl -F add=@&lt;file name&gt;</h4>
+<!--                                <h3 style="color:white"> or </h3>-->
+<!--                                <h4 style="color:white">curl {{ .address }}/uploadCurl -F add=@&lt;file name&gt;</h4>-->
 								<!-- <a href="#" class="btn btn-white btn-outline-white" tyle="color:#3ac4e2">Upload file</a> -->
                                 <br>
 								<br>
@@ -69,17 +69,17 @@
 									<p> {{ .size }} bytes</p>
 									{{end}}
 								</div>
-								<div class="form-group mb-3">
-									<label class="label" for="name">File Hash:</label>
-									{{ if .hash }}
-									<p> {{ .hash }} </p>
-									{{end}}
-								</div>
+<!--								<div class="form-group mb-3">-->
+<!--									<label class="label" for="name">File Hash:</label>-->
+<!--									{{ if .hash }}-->
+<!--									<p> {{ .hash }} </p>-->
+<!--									{{end}}-->
+<!--								</div>-->
                                 <div class="form-group mb-3">
 									<label class="label" for="name">Sharable Link:</label>
                                     <br>
 									{{ if .link }}
-									<a href="{{ .link }}" style="color:#1d91ac">{{ .filename }} link</a>
+									<a href="{{ .link }}" style="color:#1d91ac" target="_blank">{{ .filename }} link</a>
 									{{end}}
 								</div>
 								<!-- <div class="form-group mb-3">
@@ -89,7 +89,7 @@
 									<label class="label" for="name">File Name:</label>
 									<p>Test.txt</p>
 								</div> -->
-								</div>
+<!--								</div>-->
 								<div class="form-group d-md-flex">
 									<!-- <div class="w-50 text-left">
 										<label class="checkbox-wrap checkbox-primary mb-0">Remember Me

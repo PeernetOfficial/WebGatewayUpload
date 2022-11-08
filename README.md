@@ -11,9 +11,13 @@ go build .
 ```
 
 ## Run 
-Run on default parameters 
+Run on default parameters (With Debug output)
 ```
 ./WebGatewayUpload
+```
+Run on Production mode
+```
+./WebGatewayUpload -Production
 ```
 Custom Flags 
 ```
@@ -26,6 +30,8 @@ Usage of ./WebGatewayUpload:
     	SSL Certificate file (default "server.crt")
   -Key string
     	SSL Key file (default "server.key")
+  -Production
+    	Flag to check if required to run on production mode
   -SSL
     	Flag to check if the SSL certificate is enabled or not
   -WebpageAddress string
@@ -34,7 +40,7 @@ Usage of ./WebGatewayUpload:
 
 ## Routes 
 - (GET) `/upload` (Opens upload page in the webgateway)
-- (POST) `/uploadFile` (Uploads file to peernet from Webpage)
+- (POST) `/upload` (Uploads file to peernet from Webpage)
 - (POST) `/uploadCurl` (Uploads file from CURL)
 
    Ex:
