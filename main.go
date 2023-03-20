@@ -281,7 +281,7 @@ func main() {
 			"hash":     hex.EncodeToString(warehouseResult.Hash),
 			"filename": header.Filename,
 			"size":     header.Size,
-			"link":     "https://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash),
+			"link":     "http://64.227.168.102:807/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
 			"address":  *WebpageAddress,
 		})
 
@@ -303,7 +303,7 @@ func main() {
 			fmt.Println(err)
 		}
 
-		link := "https://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash)
+		link := "http://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash)
 		c.Data(http.StatusOK, "plain/text", []byte(link))
 	})
 
