@@ -291,7 +291,7 @@ func main() {
 			"hash":     hex.EncodeToString(warehouseResult.Hash),
 			"filename": header.Filename,
 			"size":     header.Size,
-			"link":     "http://64.227.168.102:8078/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
+			"link":     "http://164.90.177.167:8889/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
 			"address":  *WebpageAddress,
 		})
 
