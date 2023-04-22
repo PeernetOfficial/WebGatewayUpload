@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Akilan1999/p2p-rendering-computation/p2p/frp"
 	"github.com/PeernetOfficial/core"
 	"github.com/PeernetOfficial/core/btcec"
 	"github.com/PeernetOfficial/core/webapi"
@@ -16,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"time"
 )
@@ -37,6 +39,12 @@ var (
 	BackendAddressWithHTTP string
 	// Production mode
 	Production *bool
+	// P2PRC mode
+	P2PRC *bool
+	// P2PRCRootNode Root node of P2PRC
+	P2PRCRootNode *string
+	// P2PRCExposePort Public exposed port
+	P2PRCExposePort *string
 )
 
 //  -------------------------------------------------------------------------------------------------------------
@@ -45,12 +53,15 @@ var (
 
 // init reading flags before any part of the code is executed
 func init() {
-	BackEndApiAddress = flag.String("BackEndApiAddress", "localhost:8088", "current environment")
+	BackEndApiAddress = flag.String("BackEndApiAddress", "localhost:8081", "current environment")
 	WebpageAddress = flag.String("WebpageAddress", "localhost:8098", "current environment")
 	SSL = flag.Bool("SSL", false, "Flag to check if the SSL certificate is enabled or not")
 	Certificate = flag.String("Certificate", "server.crt", "SSL Certificate file")
 	Key = flag.String("Key", "server.key", "SSL Key file")
 	Production = flag.Bool("Production", false, "Flag to check if required to run on production mode")
+	P2PRC = flag.Bool("P2PRC", false, "Run P2PRC mode to selfnode node")
+	P2PRCRootNode = flag.String("P2PRCHost", "", "Run P2PRC mode to selfnode node")
+	P2PRCExposePort = flag.String("P2PRCExposedPort", "", "Port exposed externally for P2PRC")
 }
 
 // InitPeernet Initializes Peernet backend
@@ -124,10 +135,9 @@ type BlockchainResponse struct {
 // AddFileWarehouse API call for (Storing file in the warehouse)
 func AddFileWarehouse(file io.Reader) *WarehouseResult {
 	url := BackendAddressWithHTTP + "/warehouse/create"
-
 	req, err := http.NewRequest("POST", url, file)
 	//req.Header.Set("X-Custom-Header", "myvalue")
-	//req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "multipart/form-data")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -309,6 +319,11 @@ func main() {
 
 	// ---------------------------------------------------------------------------------------------
 
+	// ----------------------- Check if P2PRC mode is selected for hosting ------------------------
+	if *P2PRC && *P2PRCRootNode != "" && *P2PRCExposePort != "" {
+		EscapeNATWebGateway()
+	}
+
 	// ---------------------------------- Start Gin server -----------------------------------------
 	// check if SSL is used or not
 	if *SSL {
@@ -321,4 +336,32 @@ func main() {
 		*WebpageAddress = "http://" + *WebpageAddress
 	}
 	// ---------------------------------------------------------------------------------------------
+}
+
+func EscapeNATWebGateway() (ExposePortP2PRC string, err error) {
+	host, port, err := net.SplitHostPort(*P2PRCRootNode)
+	if err != nil {
+		return
+	}
+
+	serverPort, err := frp.GetFRPServerPort("http://" + host + ":" + port)
+
+	if err != nil {
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	_, port, err = net.SplitHostPort(*WebpageAddress)
+	if err != nil {
+		return
+	}
+
+	//port for the barrierKVM server
+	ExposePortP2PRC, err = frp.StartFRPClientForServer(host, serverPort, port, *P2PRCExposePort)
+	if err != nil {
+		return
+	}
+
+	return
 }
