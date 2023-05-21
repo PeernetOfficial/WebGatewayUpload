@@ -3,6 +3,7 @@ module github.com/PeernetOfficial/WebGatewayUpload
 go 1.18
 
 replace github.com/Akilan1999/p2p-rendering-computation => /Users/akilan/Documents/p2p-rendering-computation
+replace github.com/PeernetOfficial/core  => /Users/akilan/Documents/peernet/core
 
 require (
 	github.com/Akilan1999/p2p-rendering-computation v0.0.0-00010101000000-000000000000

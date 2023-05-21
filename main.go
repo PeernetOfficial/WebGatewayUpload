@@ -16,6 +16,7 @@ import (
 	limiter "github.com/julianshen/gin-limiter"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -77,7 +78,7 @@ func InitPeernet() *core.Backend {
 
 // RunPeernet Starts the WebAPI and peernet
 func RunPeernet(backend *core.Backend) {
-	webapi.Start(backend, []string{*BackEndApiAddress}, false, "", "", 10*time.Second, 10*time.Second, uuid.Nil)
+	webapi.Start(backend, []string{*BackEndApiAddress}, false, "", "", 200000*time.Second, 200000*time.Second, uuid.Nil)
 	backend.Connect()
 
 	for {
@@ -133,41 +134,162 @@ type BlockchainResponse struct {
 // ---------------------------------- Warehouse related ------------------------------------
 
 // AddFileWarehouse API call for (Storing file in the warehouse)
-func AddFileWarehouse(file io.Reader) *WarehouseResult {
+//func AddFileWarehouse(file io.Reader, id string) *WarehouseResult {
+//    route := BackendAddressWithHTTP + "/warehouse/create"
+//
+//    form := url.Values{}
+//    form.Add("file", file)
+//    form.Add("ip", c.ip)
+//    form.Add("ua", c.ua)
+//    req.PostForm = form
+//
+//    req, err := http.NewRequest("POST", route, file)
+//    //req.Header.Set("X-Custom-Header", "myvalue")
+//    req.Header.Set("Content-Type", "multipart/form-data")
+//
+//    client := &http.Client{}
+//    resp, err := client.Do(req)
+//    if err != nil {
+//        panic(err)
+//    }
+//    defer resp.Body.Close()
+//
+//    body, err := ioutil.ReadAll(resp.Body)
+//    if err != nil {
+//        fmt.Println(err)
+//    }
+//    var result WarehouseResult
+//    err = json.Unmarshal(body, &result)
+//    if err != nil {
+//        fmt.Println(err)
+//    }
+//
+//    return &result
+//}
+
+func AddFileWarehouse(File io.Reader, uuid string) (resp *WarehouseResult, err error) {
+	//// Prepare a form that you will submit to that URL.
+	//var b bytes.Buffer
+	//w := multipart.NewWriter(&b)
+	//for key, r := range values {
+	//	var fw io.Writer
+	//	if x, ok := r.(io.Closer); ok {
+	//		defer x.Close()
+	//	}
+	//	// Add an image file
+	//	if x, ok := r.(*os.File); ok {
+	//		if fw, err = w.CreateFormFile(key, x.Name()); err != nil {
+	//			return
+	//		}
+	//	} else {
+	//		// Add other fields
+	//		if fw, err = w.CreateFormField(key); err != nil {
+	//			return
+	//		}
+	//	}
+	//	if _, err = io.Copy(fw, r); err != nil {
+	//		return nil, err
+	//	}
+	//
+	//}
+	//// Don't forget to close the multipart writer.
+	//// If you don't close it, your request will be missing the terminating boundary.
+	//w.Close()
+	//
+	//// Now that you have a form, you can submit it to your handler.
+	//req, err := http.NewRequest("POST", BackendAddressWithHTTP+"/warehouse/create", &b)
+	//if err != nil {
+	//	return
+	//}
+	//// Don't forget to set the content type, this will contain the boundary.
+	//req.Header.Set("Content-Type", w.FormDataContentType())
+	//
+	//client := &http.Client{}
+	//
+	//// Submit the request
+	//res, err := client.Do(req)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//// Check the response
+	//if res.StatusCode != http.StatusOK {
+	//	err = fmt.Errorf("bad status: %s", res.Status)
+	//}
+	//
+	//body, err := ioutil.ReadAll(res.Body)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//err = json.Unmarshal(body, &resp)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//fmt.Println(resp)
+	//
+	//return
+
 	url := BackendAddressWithHTTP + "/warehouse/create"
-	req, err := http.NewRequest("POST", url, file)
-	//req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "multipart/form-data")
+	method := "POST"
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	_ = writer.WriteField("id", uuid)
+	part2, errFile2 := writer.CreateFormFile("File", "test")
+	_, errFile2 = io.Copy(part2, File)
+	if errFile2 != nil {
+		fmt.Println(errFile2)
+		return
+	}
+	err = writer.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
+	req, err := http.NewRequest(method, url, payload)
 
-	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	var result WarehouseResult
-	err = json.Unmarshal(body, &result)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
+		return
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	return &result
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // UploadFile Simple abstracted function to add files to peernet core
-func UploadFile(backend *core.Backend, file *multipart.File, header *multipart.FileHeader) (*btcec.PublicKey, *WarehouseResult, error) {
+func UploadFile(backend *core.Backend, file *multipart.File, header *multipart.FileHeader, uuid string) (*btcec.PublicKey, *WarehouseResult, error) {
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, *file); err != nil {
 		return nil, nil, errors.New("io.Copy not successful")
 	}
 
 	// adds file to warehouse
-	warehouseResult := AddFileWarehouse(buf)
+	warehouseResult, err := AddFileWarehouse(buf, uuid)
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, nil, err
+	}
 	// current using default port for Peernet api which is 8080
 	// First add file to warehouse
 
@@ -225,7 +347,35 @@ func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
 		return nil
 	}
 
+	fmt.Println(result)
+
 	return &result
+}
+
+// ---------------------------------------------------------------------------------------------
+// ----------------------------------- Get status upload file  ---------------------------------
+
+func GetStatusUploadFile(uuid string) (uploadStatus *webapi.UploadStatus) {
+	url := BackendAddressWithHTTP + "/create/track/uploadID?id=" + uuid
+
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//We Read the response body on the line below.
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = json.Unmarshal(body, uploadStatus)
+	if err != nil {
+		return nil
+	}
+
+	fmt.Println(uploadStatus.Progress.Percentage)
+
+	return
 }
 
 // -----------------------------------------------------------------------------------------
@@ -251,6 +401,8 @@ func main() {
 		r = gin.Default()
 	}
 
+	r.Use(CORSMiddleware())
+
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/templates", "./templates")
 
@@ -262,8 +414,8 @@ func main() {
 
 	// ---------------------------------------- Routes ---------------------------------------------
 	// GET /upload to open upload page from webgateway
-	r.GET("/upload", lm.Middleware(), func(c *gin.Context) {
-		c.HTML(http.StatusOK, "upload.html", nil)
+	r.GET("/", lm.Middleware(), func(c *gin.Context) {
+		c.HTML(http.StatusOK, "upload.html", gin.H{"backendUrl": *BackEndApiAddress})
 	})
 
 	// POST /uploadFile Uploads file to peernet from Webgateway
@@ -271,6 +423,8 @@ func main() {
 		file, header, err := c.Request.FormFile("file")
 		defer file.Close()
 
+		uuid := c.Request.FormValue("uuid")
+
 		if err != nil {
 			c.HTML(http.StatusBadRequest, "upload.html", gin.H{
 				"error": err,
@@ -278,25 +432,34 @@ func main() {
 			return
 		}
 
-		publicKey, warehouseResult, err := UploadFile(backend, &file, header)
+		publicKey, warehouseResult, err := UploadFile(backend, &file, header, uuid)
 		if err != nil {
 			c.HTML(http.StatusBadRequest, "upload.html", gin.H{
-				"error": err,
+				"backendUrl": *BackEndApiAddress,
+				"error":      err,
 			})
 			return
 			//fmt.Println(err)
 		}
 
-		c.HTML(http.StatusOK, "upload.html", gin.H{
-			"hash":     hex.EncodeToString(warehouseResult.Hash),
-			"filename": header.Filename,
-			"size":     header.Size,
-			"link":     "http://164.90.177.167:8889/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
-			"address":  *WebpageAddress,
+		c.JSON(http.StatusOK, gin.H{
+			"hash":       hex.EncodeToString(warehouseResult.Hash),
+			"filename":   header.Filename,
+			"size":       header.Size,
+			"link":       "http://164.90.177.167:8889/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
+			"address":    *WebpageAddress,
+			"backendUrl": *BackEndApiAddress,
 		})
 
 	})
 
+	r.GET("/uploadStatus", lm.Middleware(), func(c *gin.Context) {
+
+		uuid := c.Query("uuid")
+
+		c.JSON(http.StatusOK, GetStatusUploadFile(uuid))
+
+	})
 	// Implement CURL script to ensure linux users can upload directly
 	// the Cli like https://bashupload.com
 	// Ex: curl http://localhost:8080/uploadCurl -F add=@<file name>
@@ -308,7 +471,7 @@ func main() {
 			fmt.Println(err)
 		}
 
-		publicKey, warehouseResult, err := UploadFile(backend, &file, header)
+		publicKey, warehouseResult, err := UploadFile(backend, &file, header, "")
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -364,4 +527,22 @@ func EscapeNATWebGateway() (ExposePortP2PRC string, err error) {
 	}
 
 	return
+}
+
+// CORSMiddleware Use Cors middleware
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }

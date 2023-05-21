@@ -14,6 +14,19 @@
 
 </head>
 
+<style>
+    #myProgress {
+        width: 100%;
+        background-color: #ddd;
+    }
+
+    #myBar {
+        width: 1%;
+        height: 30px;
+        background-color: #04AA6D;
+    }
+</style>
+
 <body>
 	<section class="ftco-section">
 		<div class="container">
@@ -25,16 +38,20 @@
 								<h2 class="Peernetblue">Upload file to peernet</h2>
 								<br>
                                 <br>
-								<form class="form-group" method="POST" action="/upload" enctype="multipart/form-data">
+<!--								<form class="form-group" method="POST" action="/upload" enctype="multipart/form-data">-->
 									<div class="form-group mb-3">
 										<!-- <label for="formFileLg" class="form-label">Upload your file</label> -->
 										<input class="btn btn-white btn-outline-white" id="formFileLg" type="file" name="file" required>
 									</div>
-									<input class="btn btn-white btn-outline-white" type="submit" value="Submit">
+									<input class="btn btn-white btn-outline-white" type="button" value="Submit" onclick="uploader()">
 									{{ if .error }}
 									<h3 style="color:red"> Error: {{ .error }} </h3>
 									{{end}}
-								</form>
+<!--								</form>-->
+
+<!--                                <div id="myProgress">-->
+<!--                                    <div id="myBar"></div>-->
+<!--                                </div>-->
                                 <br>
 <!--                                <div class="progress">-->
 <!--                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 3%"></div>-->
@@ -63,15 +80,11 @@
 							<form action="#" class="signin-form">
 								<div class="form-group mb-3">
 									<label class="label" for="name">File Name:</label>
-									{{ if .filename }}
-									<p> {{ .filename }} </p>
-									{{end}}
+									<p id="fileName"> {{ .filename }} </p>
 								</div>
 								<div class="form-group mb-3">
 									<label class="label" for="name">File Size:</label>
-									{{ if .size }}
-									<p> {{ .size }} bytes</p>
-									{{end}}
+									<p id="fileSize"> {{ .size }} bytes</p>
 								</div>
 <!--								<div class="form-group mb-3">-->
 <!--									<label class="label" for="name">File Hash:</label>-->
@@ -82,9 +95,7 @@
                                 <div class="form-group mb-3">
 									<label class="label" for="name">Sharable Link:</label>
                                     <br>
-									{{ if .link }}
-									<a href="{{ .link }}" style="color:#1d91ac" target="_blank">{{ .filename }} link</a>
-									{{end}}
+									<a href="{{ .link }}" style="color:#1d91ac" target="_blank" id="fileLink"></a>
 								</div>
 								<!-- <div class="form-group mb-3">
 									<label class="label" for="password">Password</label>
@@ -124,15 +135,64 @@
         // The second call will start the upload based
         // on the ID presented
         //
-        // function uploader() {
-        //     var formData = new FormData();
-        //     formData.append("name", "Smith");
-        //     formData.append("data", fileInputElement.files[0]);
-        //     var request = new XMLHttpRequest();
-        //
-        //     request.open("POST", "https://site[DOT]net/upload");
-        //     request.send(formData);
-        // }
+
+        var backendUrl = {{ .backendUrl }}
+        function uploader() {
+            var formData = new FormData();
+            var uuid = generateUUID()
+            formData.append("id", uuid);
+            formData.append("file",  document.getElementById("formFileLg").files[0]);
+            var request = new XMLHttpRequest();
+
+            request.open("POST", "/upload");
+            request.send(formData);
+            //
+            // setTimeout(function(){
+            //     console.log(UploadTracker(uuid));
+            // }, 100);
+
+
+            request.onload = () => {
+                if ( request.readyState == 4 &&  request.status == 200) {
+                    let data =  request.response;
+                    console.log(data);
+
+                    data = JSON.parse(data)
+
+                    document.getElementById("fileName").innerText = data["filename"]
+                    document.getElementById("fileSize").innerText = data["size"] + " bytes"
+                    document.getElementById("fileLink").innerText = data["filename"] + " link"
+                    document.getElementById("fileLink").href = data["link"]
+
+                } else {
+                    console.log(`Error: ${ request.status}`);
+                }
+            };
+        }
+
+        function UploadTracker(uuid) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open( "GET", "/uploadStatus?uuid=" + uuid, false ); // false for synchronous request
+            xmlHttp.send( null );
+            return xmlHttp.responseText;
+        }
+
+        // source: https://stackoverflow.com/questions/105034/how-do-i-create-a-guid-uuid
+        function generateUUID() { // Public Domain/MIT
+            var d = new Date().getTime();//Timestamp
+            var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16;//random number between 0 and 16
+                if(d > 0){//Use timestamp until depleted
+                    r = (d + r)%16 | 0;
+                    d = Math.floor(d/16);
+                } else {//Use microseconds since page-load if supported
+                    r = (d2 + r)%16 | 0;
+                    d2 = Math.floor(d2/16);
+                }
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
 
     </script>
 
