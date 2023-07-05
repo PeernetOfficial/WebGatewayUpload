@@ -46,6 +46,8 @@ var (
 	P2PRCRootNode *string
 	// P2PRCExposePort Public exposed port
 	P2PRCExposePort *string
+	// DownloadGatewayURL Download Gateway URL
+	DownloadGatewayURL *string
 )
 
 //  -------------------------------------------------------------------------------------------------------------
@@ -63,6 +65,7 @@ func init() {
 	P2PRC = flag.Bool("P2PRC", false, "Run P2PRC mode to selfnode node")
 	P2PRCRootNode = flag.String("P2PRCHost", "", "Run P2PRC mode to selfnode node")
 	P2PRCExposePort = flag.String("P2PRCExposedPort", "", "Port exposed externally for P2PRC")
+	DownloadGatewayURL = flag.String("DownloadGatewayURL", "localhost:8081", "Download gateway URL (Start with http: or https:)")
 }
 
 // InitPeernet Initializes Peernet backend
@@ -109,9 +112,10 @@ type BlockchainRequest struct {
 }
 
 type File struct {
-	Hash []byte `json:"hash"`
-	Type uint16 `json:"type"`
-	Name string `json:"name"`
+	Hash       []byte `json:"hash"`
+	Type       uint16 `json:"type"`
+	Name       string `json:"name"`
+	FileFormat uint16 `json:"format"`
 }
 
 // BlockchainResponse blockchain backend API response struct
@@ -312,7 +316,7 @@ func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
 	url := BackendAddressWithHTTP + "/blockchain/file/add"
 
 	// Get file type
-	detectType, _, err := webapi.FileDetectType(filename)
+	detectType, fileFormat, err := webapi.FileDetectType(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -323,6 +327,7 @@ func AddFileToBlockchain(hash []byte, filename string) *BlockchainResponse {
 	files.Name = filename
 	files.Hash = hash
 	files.Type = detectType
+	files.FileFormat = fileFormat
 	blockchainRequest.Files = append(blockchainRequest.Files, files)
 
 	Byte, err := json.Marshal(blockchainRequest)
@@ -446,7 +451,7 @@ func main() {
 			"hash":       hex.EncodeToString(warehouseResult.Hash),
 			"filename":   header.Filename,
 			"size":       header.Size,
-			"link":       "http://164.90.177.167:8889/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
+			"link":       *DownloadGatewayURL + "/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash) + "/?filename=" + header.Filename,
 			"address":    *WebpageAddress,
 			"backendUrl": *BackEndApiAddress,
 		})
@@ -463,22 +468,22 @@ func main() {
 	// Implement CURL script to ensure linux users can upload directly
 	// the Cli like https://bashupload.com
 	// Ex: curl http://localhost:8080/uploadCurl -F add=@<file name>
-	r.POST("/uploadCurl", lm.Middleware(), func(c *gin.Context) {
-		file, header, err := c.Request.FormFile("add")
-		defer file.Close()
-
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		publicKey, warehouseResult, err := UploadFile(backend, &file, header, "")
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		link := "http://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash)
-		c.Data(http.StatusOK, "plain/text", []byte(link))
-	})
+	//r.POST("/uploadCurl", lm.Middleware(), func(c *gin.Context) {
+	//	file, header, err := c.Request.FormFile("add")
+	//	defer file.Close()
+	//
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//
+	//	publicKey, warehouseResult, err := UploadFile(backend, &file, header, "")
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//
+	//	link := "http://peer.ae/" + hex.EncodeToString(publicKey.SerializeCompressed()) + "/" + hex.EncodeToString(warehouseResult.Hash)
+	//	c.Data(http.StatusOK, "plain/text", []byte(link))
+	//})
 
 	// ---------------------------------------------------------------------------------------------
 
@@ -490,8 +495,11 @@ func main() {
 	// ---------------------------------- Start Gin server -----------------------------------------
 	// check if SSL is used or not
 	if *SSL {
-		BackendAddressWithHTTP = "https://" + *BackEndApiAddress
-		r.RunTLS(*WebpageAddress, *Certificate, *Key)
+		BackendAddressWithHTTP = "http://" + *BackEndApiAddress
+		err := r.RunTLS(*WebpageAddress, *Certificate, *Key)
+		if err != nil {
+			panic(err)
+		}
 		*WebpageAddress = "https://" + *WebpageAddress
 	} else {
 		BackendAddressWithHTTP = "http://" + *BackEndApiAddress
